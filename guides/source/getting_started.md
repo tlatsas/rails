@@ -725,30 +725,99 @@ within Rails applications. Models are the final piece of the "MVC" puzzle.
 Let's look at how we can go about connecting all these pieces together into a
 cohesive whole.
 
+### Viewing a List of Articles
+
+Now that you've seen how to create a route, a controller, an action, a view, and
+a model, let's connect these pieces together.
+
+Let's go back to `app/controllers/articles_controller.rb` now. We're going to
+change the `index` action here to use our model.
 
 ```ruby
 class ArticlesController < ApplicationController
+  def index
+    @articles = Article.all
+  end
 end
 ```
 
-A controller is a class that is defined to inherit from
-`ApplicationController`.
-It's inside this class that you'll define methods that will become the actions
-for this controller. These actions will perform CRUD operations on the articles
-within our system.
+Controller actions are where we assemble all the data that will later be
+displayed in the _view_. In this `index` action, we're calling `Article.all`
+which will make a query to our database and retrieve all of the articles,
+storing them in an instance variable: `@articles`.
 
-NOTE: There are `public`, `private` and `protected` methods in Ruby,
-but only `public` methods can be actions for controllers.
-For more details check out [Programming Ruby](https://ruby-doc.org/docs/ProgrammingRuby/).
+We're using an instance variable here for a very good reason: instance
+variables are automatically shared from controllers into views. So to use this
+`@articles` variable in our view to show all the articles, we can write this
+code in `app/views/articles/index.html.erb`:
 
-If you refresh <http://localhost:3000/articles/new> now, you'll get a new error:
+```erb
+<h1>Articles</h1>
 
-![Unknown action new for ArticlesController!](images/getting_started/unknown_action_new_for_articles.png)
+<ul>
+  <% @articles.each do |article| %>
+    <li><%= article.title %></li>
+  <% end %>
+</ul>
+```
 
-This error indicates that Rails cannot find the `new` action inside the
-`ArticlesController` that you just generated. This is because when controllers
-are generated in Rails they are empty by default, unless you tell it
-your desired actions during the generation process.
+We've now changed this file from using just HTML to using HTML and _ERB_. ERB
+is a templating system that we can use to run Ruby code.
+
+There's two types of ERB tag beginnings that we're using here: `<%` and `<%=`.
+The `<%` tag means to evalulate some Ruby code, while the `<%=` means to
+evalulate that code, and then to output the return value from that code.
+
+In this view, we do not want the output of `@articles.each` to show, and so we
+use a `<%`. But we do want each of the articles' titles to appear, and so we
+use `<%=`.
+
+When we start an ERB tag with either `<%` or `<%=`, it can help to think "I am
+now writing Ruby, not HTML". Anything you could write in a regular Ruby
+program, can go inside these ERB tags; but usually we would keep the content of
+the ERB tags short, for readability.
+
+When the view is used by Rails, the embedded Ruby will be evalulated, and the
+page will show our list of articles. Let's go to <http://localhost:3000> now
+and see the list of articles:
+
+![List of articles](images/getting_started/article_list.png)
+
+If we look at the source of the page in our browser
+<view-source:http://localhost:3000/>, we'll see this part:
+
+```html
+<h1>Articles</h1>
+
+<ul>
+    <li>Hello Rails</li>
+    <li>Post #2</li>
+</ul>
+```
+
+This is the HTML that has been output from our view in our Rails application.
+
+Here's what's happened to get to this point:
+
+1. Our browser makes a request: `GET http://localhost:3000`
+2. The Rails application receives this request
+3. The router sees that the `root` route is configured to route to the `ArticlesController`'s `index` action
+4. The `index` action uses the `Article` model to find all the articles
+5. Rails automatically renders the `app/views/articles/index.html.erb` view
+6. The view contains ERB (Embedded Ruby). This code is evalulated, and plain HTML is returned.
+7. The server sends a response containing that plain HTML back to the browser.
+
+Here's a flowchart of the above steps:
+
+![Application flowchart](images/getting_started/application_flowchart.png)
+
+We've now successfully connected all the different parts of our Rails
+application together: the router, the controller, the action, the model, and the
+view. With this connection, we have finished the first action of our
+application.
+
+Let's move on to the second action!
+
 
 To manually define an action inside a controller, all you need to do is to
 define a new method inside the controller. Open
