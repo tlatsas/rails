@@ -818,70 +818,218 @@ application.
 
 Let's move on to the second action!
 
+### Viewing a single Article
 
-To manually define an action inside a controller, all you need to do is to
-define a new method inside the controller. Open
-`app/controllers/articles_controller.rb` and inside the `ArticlesController`
-class, define the `new` method so that your controller now looks like this:
+For our second action, we want our application to show us the details about an
+article, specifically the article's title and body:
+
+![Single Article View](images/getting_started/single_article_view.png)
+
+We'll start in the same place we started with the `index` action, which was in
+`config/routes.rb`. We'll add a new route for this page. Let's change our
+routes file now to this:
+
+```ruby
+Rails.application.routes.draw do
+  root "articles#index"
+  get "/articles", to: "articles#index"
+  get "/articles/:id", to: "articles#show"
+end
+```
+
+This route is another `get` route, but it has something different in it: `:id`.
+This syntax in Rails routing is called a _parameter_, and it will be available
+in the `show` action of `ArticlesController` when a request is made. A request
+to this action will use a route such as <http://localhost:3000/articles/1> or
+<http://localhost:3000/articles/2>.
+
+This time, we're still routing to the `ArticlesController`, but we're going to
+the `show` action of that controller instead of the `index` action.
+
+Let's look at how to add that `show` action to the `ArticlesController`. We'll
+open `app/controllers/articles_controller.rb` and add it in, under the `index`
+action:
 
 ```ruby
 class ArticlesController < ApplicationController
-  def new
+  def index
+    @articles = Article.all
+  end
+
+  def show
+    @article = Article.find(params[:id])
   end
 end
 ```
 
-With the `new` method defined in `ArticlesController`, if you refresh
-<http://localhost:3000/articles/new> you'll see another error:
+When a request is made to this `show` action, it will be made to a URL such as
+<http://localhost:3000/articles/1>. Rails sees that the last part of that route
+is a dynamic parameter, and makes that parameter available for us in our
+controller through the method `params`. We use `params[:id]` to access that
+parameter, because back in the routes file we called the parameter `:id`. If we
+used a name like `:article_id` in the routes file, then we would need to use
+`params[:article_id]` here too.
 
-![Template is missing for articles/new]
-(images/getting_started/template_is_missing_articles_new.png)
+The `show` action finds a particular article with that ID by using the
+`Article` model's method `find`, and passing `find` that `params[:id]`
+parameter. Once the action has found our article, it needs to then display that
+article's information, which will do by attempting to use a view at
+`app/views/articles/show.html.erb`. Let's create that file now and add this
+content:
 
-You're getting this error now because Rails expects plain actions like this one
-to have views associated with them to display their information. With no view
-available, Rails will raise an exception.
+```erb
+<h1><%= @article.title %></h1>
 
-Let's look at the full error message again:
-
->ArticlesController#new is missing a template for request formats: text/html
-
->NOTE!
->Unless told otherwise, Rails expects an action to render a template with the same name, contained in a folder named after its controller. If this controller is an API responding with 204 (No Content), which does not require a template, then this error will occur when trying to access it via browser, since we expect an HTML template to be rendered for such requests. If that's the case, carry on.
-
-The message identifies which template is missing. In this case, it's the
-`articles/new` template. Rails will first look for this template. If not found,
-then it will attempt to load a template called `application/new`, because the
-`ArticlesController` inherits from `ApplicationController`.
-
-Next the message contains `request.formats` which specifies the format of
-template to be served in response. It is set to `text/html` as we requested
-this page via browser, so Rails is looking for an HTML template.
-
-The simplest template that would work in this case would be one located at
-`app/views/articles/new.html.erb`. The extension of this file name is important:
-the first extension is the _format_ of the template, and the second extension
-is the _handler_ that will be used to render the template. Rails is attempting
-to find a template called `articles/new` within `app/views` for the
-application. The format for this template can only be `html` and the default
-handler for HTML is `erb`. Rails uses other handlers for other formats.
-`builder` handler is used to build XML templates and `coffee` handler uses
-CoffeeScript to build JavaScript templates. Since you want to create a new
-HTML form, you will be using the `ERB` language which is designed to embed Ruby
-in HTML.
-
-Therefore the file should be called `articles/new.html.erb` and needs to be
-located inside the `app/views` directory of the application.
-
-Go ahead now and create a new file at `app/views/articles/new.html.erb` and
-write this content in it:
-
-```html
-<h1>New Article</h1>
+<%= @article.body %>
 ```
 
-When you refresh <http://localhost:3000/articles/new> you'll now see that the
-page has a title. The route, controller, action, and view are now working
-harmoniously! It's time to create the form for a new article.
+Now when we go to <http://localhost:3000/articles/1> we will see the article:
+
+![Single Article View](images/getting_started/single_article_view.png)
+
+Excellent! We now have our second action working in our controller. But in
+order to navigate to it, we have to manually type in
+<http://localhost:3000/articles/1>. That seems a bit silly. Let's change our
+application a little, so that we can navigate to an article by clicking a link
+from the list of articles.
+
+To add the link to an article, we need to change
+`app/views/articles/index.html.erb`, which currently looks like this:
+
+```erb
+<h1>Articles</h1>
+
+<ul>
+  <% @articles.each do |article| %>
+    <li><%= article.title %></li>
+  <% end %>
+</ul>
+```
+
+This code will render an `li` element for each of the articles, and that
+element contains the title of the article. But we can't click on the title to
+go to an article yet! To make that happen, we need to use an `a` tag:
+
+```erb
+<h1>Articles</h1>
+
+<ul>
+  <% @articles.each do |article| %>
+    <li>
+      <a href='/articles/<%= article.id %>'>
+        <%= article.title %>
+      </a>
+    </li>
+  <% end %>
+</ul>
+```
+
+This `a` tag will provide us with a link to the specific article. If we go back
+to <http://localhost:3000/>, we'll see that we can now click on the articles:
+
+![Articles list with links](images/getting_started/articles_list_with_links.png)
+
+Clicking either of these links will take us to the relevant article:
+
+![Single Article View](images/getting_started/single_article_view.png)
+
+Now we have been able to link together the `index` and `show` pages in our
+application using a simple `a` tag. What could be simpler than that?
+
+Well, Rails has a method called `link_to` that can make that linking a little
+simpler. Let's use this in `app/views/articles/index.html.erb`:
+
+```erb
+<h1>Articles</h1>
+
+<ul>
+  <% @articles.each do |article| %>
+    <li>
+      <%= link_to article.title, article_path(article) %>
+    </li>
+  <% end %>
+</ul>
+```
+
+There we go, that is now a little bit cleaner. Rails has given us a way to
+shorten this code quite a lot. The `article_path` method that we're calling at the end of this line is using a feature of Rails called a _routing helper_. These are methods that can be
+used to generate route paths like `/articles/1` or `/articles/2` programatically.
+We'll use one of these to generate the route for our article. To set this up,
+let's go back to `config/routes.rb` and change this line:
+
+```ruby
+get "/articles/:id", to: "articles#show"
+```
+
+To this:
+
+```ruby
+get "/articles/:id", to: "articles#show", as: :article
+```
+
+The `:as` option here tells Rails that we want routing helpers for this article
+route to be available in our application. Rails will then let us use this
+helper to build that route.
+
+
+At this point, we now have two lines in our `config/routes.rb` file that define routes for `ArticlesController`:
+
+```ruby
+get "/articles", to: "articles#index"
+get "/articles/:id", to: "articles#show", as: :article
+```
+
+NOTE: You might be able to guess here that, as this guide continues, we're going
+to add even more routes for this controller. You would be correct! We're going
+to add five more routes. Rails _does_ provide us a way for us to write all these
+routes using one simple line in `config/routes.rb`: `resources :articles`. This
+line will generate _seven_ routes for our `ArticlesController`, and all the
+routing helpers too. We're _intentionally not using it_ in this guide to clearly
+explain how routing works within a Rails application.
+
+Let's look at how we can use that in `app/views/articles/index.html.erb` now,
+by changing the end of the `link_to` call to this:
+
+```erb
+<h1>Articles</h1>
+
+<ul>
+  <% @articles.each do |article| %>
+    <li>
+      <%= link_to article.title, article_path(article) %>
+    </li>
+  <% end %>
+</ul>
+```
+
+The `link_to` now assembles its path using the `article_path` helper. This will
+still generate the same `/articles/:id` route we used earlier, but now it
+happens programatically instead. Now there is not so much switching happening
+between HTML and Ruby in this code. We enter Ruby, generate a link, and exit
+Ruby. The code still does the same thing: it links an article's title to the
+`show` page for that article.
+
+TIP: To learn more about routing, read the [Rails Routing from the Outside In Guide](https://guides.rubyonrails.org/routing.html).
+
+We now have an `index` action that lists the articles, and a `show` action that
+shows the title and body for a specific article. Before we move on, we'll make
+one more little change: we'll add a "Back" link in
+`app/views/articles/show.html.erb`:
+
+```erb
+<h1><%= @article.title %></h1>
+
+<%= @article.body %>
+
+<div>
+  <%= link_to "Back", "/" %>
+</div>
+```
+
+This will allow us to navigate back to the list of articles easily.
+
+With that small change done, let's now look at how we can create new articles
+within this application.
 
 ### The first form
 
